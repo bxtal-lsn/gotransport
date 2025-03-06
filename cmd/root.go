@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	configpkg "github.com/bxtal-lsn/gotransport/internal/config"
 	"github.com/bxtal-lsn/gotransport/pkg/cert"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +49,7 @@ func initConfig() {
 	}
 
 	var err error
-	config, err = config.LoadConfig[Config](cfgFilePath)
+	config, err = configpkg.LoadConfig[Config](cfgFilePath)
 	if err != nil {
 		if verbose {
 			fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
