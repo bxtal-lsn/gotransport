@@ -72,7 +72,7 @@ func init() {
 	// Add flags to DNS add command
 	dnsAddCmd.Flags().StringVarP(&dnsDomain, "domain", "d", "", "domain name")
 	dnsAddCmd.Flags().StringVarP(&dnsType, "type", "t", "A", "record type (A or CNAME)")
-	dnsAddCmd.Flags().StringVarP(&dnsValue, "value", "v", "", "record value (IP address for A, domain for CNAME)")
+	dnsAddCmd.Flags().StringVar(&dnsValue, "value", "", "record value (IP address for A, domain for CNAME)")
 	dnsAddCmd.Flags().Uint32Var(&dnsTTL, "ttl", 3600, "record time to live in seconds")
 	dnsAddCmd.Flags().StringVarP(&dnsStoragePath, "storage", "s", getDefaultStoragePath(), "path to DNS records storage file")
 	dnsAddCmd.MarkFlagRequired("domain")
