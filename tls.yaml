@@ -1,0 +1,42 @@
+caCert:
+  serial: 1
+  validForYears: 10
+  subject:
+    country: US
+    organization: GoTransport Demo Org
+    organizationalUnit: Certificate Management
+    locality: NY
+    commonName: GoTransport CA
+
+certs:
+  server:
+    serial: 1
+    validForYears: 1
+    dnsNames: ["localhost", "server.local", "127.0.0.1"]
+    subject:
+      country: US
+      organization: GoTransport Demo Org
+      organizationalUnit: Server Team
+      locality: NY
+      commonName: localhost
+  
+  client:
+    serial: 2
+    validForYears: 1
+    subject:
+      country: US
+      organization: GoTransport Demo Org
+      organizationalUnit: Client Team
+      locality: NY
+      commonName: client.local
+      
+  harbor:
+    serial: 3
+    validForYears: 2
+    dnsNames: ["harbor.local", "harbor.yourdomain.com"]
+    subject:
+      country: US
+      organization: GoTransport Demo Org
+      organizationalUnit: DevOps Team
+      locality: NY
+      commonName: harbor.local

@@ -1,0 +1,25 @@
+# Example DNS records configuration
+# This file is not directly used by the DNS server, but serves as documentation
+
+records:
+  - domain: harbor.local
+    type: A
+    value: 192.168.1.100
+    ttl: 3600
+  
+  - domain: *.harbor.local
+    type: A
+    value: 192.168.1.100
+    ttl: 3600
+  
+  - domain: dev.local
+    type: A
+    value: 127.0.0.1
+    ttl: 3600
+  
+  - domain: api.dev.local
+    type: CNAME
+    value: dev.local.
+    ttl: 3600
+
+# Note: The actual DNS records are stored in dns.json
