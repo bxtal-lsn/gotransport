@@ -3,9 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv" // Add this
 
+	"github.com/AlecAivazis/survey/v2" // Add this
 	"github.com/bxtal-lsn/gotransport/internal/dnsrecords"
 	"github.com/bxtal-lsn/gotransport/pkg/dns"
+	"github.com/fatih/color"            // Add this
+	"github.com/olekukonko/tablewriter" // Add this
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +27,7 @@ var (
 	dnsInsecure bool
 )
 
+// Keep your existing init function unchanged
 func init() {
 	// Main DNS command
 	dnsCmd := &cobra.Command{
@@ -63,6 +68,7 @@ func init() {
 		RunE:  runDNSRemove,
 	}
 
+	// Add your existing flags here...
 	// Add flags to DNS serve command
 	dnsServeCmd.Flags().StringVarP(&dnsAddress, "address", "a", "0.0.0.0", "address to listen on")
 	dnsServeCmd.Flags().IntVarP(&dnsPort, "port", "p", 53, "port to listen on")
@@ -96,10 +102,12 @@ func init() {
 	rootCmd.AddCommand(dnsCmd)
 }
 
+// Keep your existing getDefaultStoragePath function
 func getDefaultStoragePath() string {
 	return "dns.json"
 }
 
+// Keep your existing runDNSServe function, or update it if needed
 func runDNSServe(cmd *cobra.Command, args []string) error {
 	// If insecure flag is set, use non-privileged port
 	if dnsInsecure && dnsPort == 53 {
@@ -122,53 +130,7 @@ func runDNSServe(cmd *cobra.Command, args []string) error {
 	return server.StartWithSignalHandling()
 }
 
-func runDNSAdd(cmd *cobra.Command, args []string) error {
-	// Convert record type string to RecordType
-	recordType := dnsrecords.RecordType(dnsType)
-
-	// Create storage
-	storage, err := dnsrecords.NewStorage(dnsStoragePath)
-	if err != nil {
-		return err
-	}
-
-	// Add record
-	if err := storage.Add(dnsDomain, recordType, dnsValue, dnsTTL); err != nil {
-		return err
-	}
-
-	fmt.Printf("Added DNS record: %s -> %s (%s)\n", dnsDomain, dnsValue, dnsType)
-	return nil
-}
-
-func runDNSList(cmd *cobra.Command, args []string) error {
-	// Create storage
-	storage, err := dnsrecords.NewStorage(dnsStoragePath)
-	if err != nil {
-		return err
-	}
-
-	// List records
-	records := storage.List()
-
-	if len(records) == 0 {
-		fmt.Println("No DNS records found")
-		return nil
-	}
-
-	// Display records
-	fmt.Println("DNS Records:")
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("%-30s %-10s %-20s\n", "Domain", "Type", "Value")
-	fmt.Println("--------------------------------------------------")
-
-	for _, record := range records {
-		fmt.Printf("%-30s %-10s %-20s\n", record.Domain, record.Type, record.Value)
-	}
-
-	return nil
-}
-
+// Function to handle DNS remove command
 func runDNSRemove(cmd *cobra.Command, args []string) error {
 	// Create storage
 	storage, err := dnsrecords.NewStorage(dnsStoragePath)
@@ -184,3 +146,136 @@ func runDNSRemove(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Removed DNS record: %s\n", dnsDomain)
 	return nil
 }
+
+// Update this function
+func runDNSList(cmd *cobra.Command, args []string) error {
+	// Create storage
+	storage, err := dnsrecords.NewStorage(dnsStoragePath)
+	if err != nil {
+		return err
+	}
+
+	// List records
+	records := storage.List()
+
+	if len(records) == 0 {
+		color.Yellow("No DNS records found")
+		return nil
+	}
+
+	// Display records
+	color.Cyan("DNS Records:")
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Domain", "Type", "Value", "TTL"})
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderColor(
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiCyanColor},
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiCyanColor},
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiCyanColor},
+		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiCyanColor},
+	)
+	table.SetColumnColor(
+		tablewriter.Colors{tablewriter.FgHiWhiteColor},
+		tablewriter.Colors{tablewriter.FgYellowColor},
+		tablewriter.Colors{tablewriter.FgGreenColor},
+		tablewriter.Colors{tablewriter.FgHiWhiteColor},
+	)
+
+	for _, record := range records {
+		table.Append([]string{
+			record.Domain,
+			string(record.Type),
+			record.Value,
+			fmt.Sprintf("%d", record.TTL),
+		})
+	}
+
+	table.Render()
+	return nil
+}
+
+// Update this function
+func runDNSAdd(cmd *cobra.Command, args []string) error {
+	// If domain or value not provided, prompt the user
+	if dnsDomain == "" {
+		prompt := &survey.Input{
+			Message: "Domain name:",
+		}
+		if err := survey.AskOne(prompt, &dnsDomain); err != nil {
+			return err
+		}
+	}
+
+	// Select record type
+	if dnsType == "" {
+		prompt := &survey.Select{
+			Message: "Record type:",
+			Options: []string{"A", "CNAME"},
+			Default: "A",
+		}
+		if err := survey.AskOne(prompt, &dnsType); err != nil {
+			return err
+		}
+	}
+
+	// Prompt for value
+	if dnsValue == "" {
+		prompt := &survey.Input{
+			Message: fmt.Sprintf("Value for %s record:", dnsType),
+			Help:    "IP address for A record, domain name for CNAME",
+		}
+		if err := survey.AskOne(prompt, &dnsValue); err != nil {
+			return err
+		}
+	}
+
+	// Prompt for TTL
+	if !cmd.Flags().Changed("ttl") {
+		ttlStr := "3600"
+		prompt := &survey.Input{
+			Message: "TTL (seconds):",
+			Default: ttlStr,
+		}
+		if err := survey.AskOne(prompt, &ttlStr); err != nil {
+			return err
+		}
+		parsedTTL, err := strconv.ParseUint(ttlStr, 10, 32)
+		if err != nil {
+			return fmt.Errorf("invalid TTL: %w", err)
+		}
+		dnsTTL = uint32(parsedTTL)
+	}
+
+	// Confirm before adding
+	var confirm bool
+	confirmPrompt := &survey.Confirm{
+		Message: fmt.Sprintf("Add DNS record %s -> %s (%s)?", dnsDomain, dnsValue, dnsType),
+		Default: true,
+	}
+	if err := survey.AskOne(confirmPrompt, &confirm); err != nil {
+		return err
+	}
+	if !confirm {
+		printWarning("Operation cancelled")
+		return nil
+	}
+
+	// Create storage and add record
+	storage, err := dnsrecords.NewStorage(dnsStoragePath)
+	if err != nil {
+		return err
+	}
+
+	recordType := dnsrecords.RecordType(dnsType)
+	if err := storage.Add(dnsDomain, recordType, dnsValue, dnsTTL); err != nil {
+		return err
+	}
+
+	printSuccess("Added DNS record: %s -> %s (%s)", dnsDomain, dnsValue, dnsType)
+	return nil
+}
+
+// Add the runDNSRemove function if needed
+

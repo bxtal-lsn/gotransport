@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/briandowns/spinner" // Add this
 	"github.com/bxtal-lsn/gotransport/pkg/cert"
+	"github.com/fatih/color" // Add this
 	"github.com/spf13/cobra"
 )
 
@@ -29,24 +32,38 @@ func init() {
 	rootCmd.AddCommand(caCmd)
 }
 
+// Update this function
 func runCACreate(cmd *cobra.Command, args []string) error {
 	if config.CACert == nil {
 		return fmt.Errorf("no CA certificate configuration found in config file")
 	}
 
 	if verbose {
-		fmt.Printf("Creating CA certificate...\n")
+		printInfo("Creating CA certificate...")
 		fmt.Printf("CA Subject: %+v\n", config.CACert.Subject)
 		fmt.Printf("Valid for: %d years\n", config.CACert.ValidForYears)
 	}
 
+	// Create spinner
+	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+	s.Suffix = " Creating CA certificate..."
+	s.Color("cyan")
+	s.Start()
+
+	// Perform operation
 	err := cert.CreateCACert(config.CACert, caKey, caCert)
+
+	// Stop spinner
+	s.Stop()
+
 	if err != nil {
+		printError("Failed to create CA: %v", err)
 		return fmt.Errorf("create CA error: %w", err)
 	}
 
-	fmt.Printf("CA created successfully!\n")
-	fmt.Printf("Key: %s\n", caKey)
-	fmt.Printf("Certificate: %s\n", caCert)
+	printSuccess("CA created successfully!")
+	color.New(color.FgHiWhite).Printf("Key: %s\n", caKey)
+	color.New(color.FgHiWhite).Printf("Certificate: %s\n", caCert)
 	return nil
 }
+
